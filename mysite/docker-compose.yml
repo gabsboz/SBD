@@ -1,0 +1,24 @@
+version: '3.9'
+
+services:
+  oracle-db:
+    image: gvenzl/oracle-xe
+    container_name: oracle-db
+    ports:
+      - "1521:1521"
+    environment:
+      ORACLE_PASSWORD: student
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'SELECT 1 FROM DUAL;' | sqlplus -s system/student@localhost/XEPDB1"]
+      interval: 10s
+      retries: 10
+
+  web:
+    build: .
+    container_name: django-app
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - oracle-db
