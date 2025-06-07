@@ -24,7 +24,6 @@ class konto(models.Model):
     haslo = models.CharField(max_length=255)
     rola = models.CharField(max_length=20, choices=Rola.choices)
     def save(self, *args, **kwargs):
-        # Sprawdź, czy hasło nie jest już zahaszowane
         if not self.haslo.startswith('pbkdf2_'):
             self.haslo = make_password(self.haslo)
         super().save(*args, **kwargs)
@@ -66,6 +65,11 @@ class ocena(models.Model):
     data_wprowadzenia = models.DateTimeField()
     nauczyciel = models.ForeignKey(nauczyciel, on_delete=models.CASCADE)
     semestr = models.ForeignKey(semestr, on_delete=models.CASCADE)
+    class Meta:
+        indexes = [
+            models.Index(fields=['student']),
+            models.Index(fields=['przedmiot']),  
+        ]
 
 class historia_ocen(models.Model):
     historia_id = models.AutoField(primary_key=True)
@@ -73,6 +77,10 @@ class historia_ocen(models.Model):
     wartosc = models.DecimalField(max_digits=4, decimal_places=2)
     data_zmiany = models.DateTimeField()
     nauczyciel = models.ForeignKey(nauczyciel, on_delete=models.CASCADE)
+    class Meta:
+        indexes = [
+            models.Index(fields=['ocena']),  
+        ]
 
 class zaliczenie(models.Model):
     zaliczenie_id = models.AutoField(primary_key=True)
@@ -88,11 +96,10 @@ class grupa_zajeciowa(models.Model):
 class student_grupa(models.Model):
     student = models.ForeignKey(student, on_delete=models.CASCADE)
     grupa = models.ForeignKey(grupa_zajeciowa, on_delete=models.CASCADE)
-    name = models.CharField(max_length=100)
-    age = models.IntegerField(null=True, blank=True)  
 
     class Meta:
         unique_together = ('student', 'grupa')
-
-    def __str__(self):
-        return self.name
+        indexes = [
+            models.Index(fields=['student']),
+            models.Index(fields=['grupa']),
+        ]
