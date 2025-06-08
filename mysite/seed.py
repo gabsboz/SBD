@@ -20,13 +20,13 @@ konto.objects.all().delete()
 # Konta studentów
 konta_studentow = [
     konto.objects.create(login=f'student{i}', haslo='123', rola=Rola.STUDENT)
-    for i in range(100)
+    for i in range(400)
 ]
 
 # Konta nauczycieli
 konta_nauczycieli = [
     konto.objects.create(login=f'nauczyciel{i}', haslo='123', rola=Rola.NAUCZYCIEL)
-    for i in range(20)
+    for i in range(50)
 ]
 
 # Konto admina
@@ -53,13 +53,13 @@ semestry = [
 # Przedmioty
 przedmioty = [
     przedmiot.objects.create(nazwa=f'Przedmiot {i}', nauczyciel=random.choice(nauczyciele), kierunek='Informatyka', rok_studiow=random.randint(1, 3))
-    for i in range(10)
+    for i in range(20)
 ]
 
 # Grupy zajęciowe
 grupy = [
     grupa_zajeciowa.objects.create(nazwa=f'Grupa {i}', przedmiot=random.choice(przedmioty))
-    for i in range(20)
+    for i in range(50)
 ]
 
 
@@ -70,7 +70,7 @@ for s in studenci:
 
 # Oceny
 oceny = []
-for _ in range(200):
+for _ in range(800):
     s = random.choice(studenci)
     p = random.choice(przedmioty)
     sem = random.choice(semestry)
@@ -86,7 +86,7 @@ for _ in range(200):
     oceny.append(o)
 
 # Historia ocen (dla 50 ocen)
-for o in random.sample(oceny, 50):
+for o in random.sample(oceny, 100):
     historia_ocen.objects.create(
         ocena=o,
         wartosc=max(2.0, o.wartosc - 0.5),
