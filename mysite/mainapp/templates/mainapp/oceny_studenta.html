@@ -1,0 +1,20 @@
+<h1>Oceny studenta {{ student.imie }} {{ student.nazwisko }}</h1>
+
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Przedmiot</th>
+        <th>Ocena</th>
+        <th>Data</th>
+    </tr>
+    {% for ocena in oceny %}
+    <tr>
+        <td>{{ ocena.0 }}</td>
+        <td>{{ ocena.3 }}</td>
+        <td>{{ ocena.1 }}</td>
+        <td>{{ ocena.2 }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<a href="{% url 'lista_studentow' %}">Wróć do listy studentów</a>

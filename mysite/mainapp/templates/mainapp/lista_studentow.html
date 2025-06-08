@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lista studentów</title>
+</head>
+<body>
+    <h1>Studenci</h1>
+    <ul>
+    {% for student in studenci %}
+        <li>
+            {{ student.imie }} {{ student.nazwisko }} — 
+            <a href="{% url 'oceny_studenta' student.student_id %}">Zobacz oceny</a>
+        </li>
+    {% empty %}
+        <li>Brak studentów</li>
+    {% endfor %}
+    </ul>
+</body>
+</html>
