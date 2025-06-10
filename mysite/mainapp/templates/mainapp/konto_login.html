@@ -1,7 +1,16 @@
 <h2>Logowanie</h2>
-{% if error %}<p style="color: red;">{{ error }}</p>{% endif %}
+
+{% if error %}
+  <p style="color:red">{{ error }}</p>
+{% endif %}
+
 <form method="post">
   {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Zaloguj</button>
+  <label for="id_konto_id">ID konta:</label>
+  {{ form.konto_id }}
+  <br>
+  <label for="id_haslo">Hasło:</label>
+  {{ form.haslo }}
+  <br>
+  <button type="submit">Zaloguj się</button>
 </form>

@@ -57,17 +57,16 @@ def konto_login(request):
     if request.method == 'POST':
         form = KontoLoginForm(request.POST)
         if form.is_valid():
-            login = form.cleaned_data['login']
+            konto_id = form.cleaned_data['konto_id']
             haslo = form.cleaned_data['haslo']
             try:
-                konto = Konto.objects.get(login=login)
+                konto = Konto.objects.get(konto_id=konto_id)
                 if konto.check_password(haslo):
                     request.session['konto_id'] = konto.konto_id
                     request.session['rola'] = konto.rola
                     if konto.rola == 'student':
                         return redirect('student_dashboard')
-
-                    return redirect('dashboard')  # lub gdziekolwiek
+                    return redirect('dashboard')  # lub inna strona dla innych ról
                 else:
                     error = "Nieprawidłowe hasło"
             except Konto.DoesNotExist:
@@ -76,6 +75,7 @@ def konto_login(request):
         form = KontoLoginForm()
 
     return render(request, 'konto_login.html', {'form': form, 'error': error})
+
 
 def konto_logout(request):
     request.session.flush()
