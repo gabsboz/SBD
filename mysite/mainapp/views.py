@@ -160,3 +160,55 @@ def nauczyciel_dashboard(request):
     return render(request, 'mainapp/nauczyciel_dashboard.html', {
         'nauczyciel': nauczyciel_obj
     })
+
+def ranking_view(request):
+    rola = request.session.get('rola')
+    if rola not in ['student', 'nauczyciel']:
+        return redirect('konto_login')
+
+    with connection.cursor() as cursor:
+        refcursor = cursor.var(oracledb.DB_TYPE_CURSOR)
+
+        cursor.execute("""
+            BEGIN
+                :refcursor := ranking;
+            END;
+        """, {'refcursor': refcursor})
+
+        result_cursor = refcursor.getvalue()
+        ranking_data = result_cursor.fetchall()
+
+    ranking_list = []
+    for idx, (student_id, srednia) in enumerate(ranking_data, start=1):
+        ranking_list.append({
+            'pozycja': idx,
+            'student_id': student_id,
+            'srednia': srednia,
+        })
+
+    if rola == 'student':
+        konto_id = request.session.get('konto_id')
+        try:
+            konto = Konto.objects.get(pk=konto_id)
+            student = Student.objects.get(konto=konto)
+        except (Konto.DoesNotExist, Student.DoesNotExist):
+            return redirect('konto_login')
+
+        for r in ranking_list:
+            if r['student_id'] == student.student_id:
+                return render(request, 'mainapp/student_ranking.html', {
+                    'moje_miejsce': r['pozycja'],
+                    'moja_srednia': r['srednia']
+                })
+
+        return render(request, 'mainapp/student_ranking.html', {
+            'moje_miejsce': None,
+            'moja_srednia': 0
+        })
+
+    elif rola == 'nauczyciel':
+        return render(request, 'mainapp/ranking_lista.html', {
+            'ranking': ranking_list
+        })
+
+    return redirect('konto_login')

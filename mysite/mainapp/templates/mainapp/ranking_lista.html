@@ -1,0 +1,20 @@
+<h1>Ranking studentów</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Miejsce</th>
+            <th>ID studenta</th>
+            <th>Średnia ocen</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in ranking %}
+        <tr>
+            <td>{{ r.pozycja }}</td>
+            <td>{{ r.student_id }}</td>
+            <td>{{ r.srednia }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

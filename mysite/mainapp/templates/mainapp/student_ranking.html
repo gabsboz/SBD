@@ -1,0 +1,8 @@
+<h1>Twój ranking</h1>
+
+{% if moje_miejsce %}
+    <p>Miejsce w rankingu: <strong>{{ moje_miejsce }}</strong></p>
+    <p>Twoja średnia: <strong>{{ moja_srednia }}</strong></p>
+{% else %}
+    <p>Nie masz jeszcze ocen.</p>
+{% endif %}
