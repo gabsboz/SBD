@@ -17,3 +17,20 @@ BEGIN
     WHERE o.student_id = p_student_id;
   RETURN grades_cursor;
 END;
+
+create or replace FUNCTION ranking
+RETURN SYS_REFCURSOR
+AS
+    wynik SYS_REFCURSOR;
+BEGIN
+    OPEN wynik FOR 
+        SELECT *
+        FROM (
+            SELECT s.student_id, NVL(ROUND(AVG(o.wartosc), 2), 0) AS srednia
+            FROM MAINAPP_STUDENT s
+            LEFT JOIN MAINAPP_OCENA o ON o.STUDENT_ID = s.STUDENT_ID
+            GROUP BY s.student_id
+        ) ranked
+        ORDER BY ranked.srednia DESC;
+    RETURN wynik;
+END;
