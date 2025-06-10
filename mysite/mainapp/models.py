@@ -65,11 +65,7 @@ class ocena(models.Model):
     data_wprowadzenia = models.DateTimeField()
     nauczyciel = models.ForeignKey(nauczyciel, on_delete=models.CASCADE)
     semestr = models.ForeignKey(semestr, on_delete=models.CASCADE)
-    class Meta:
-        indexes = [
-            models.Index(fields=['student']),
-            models.Index(fields=['przedmiot']),  
-        ]
+    
 
 class historia_ocen(models.Model):
     historia_id = models.AutoField(primary_key=True)
@@ -77,10 +73,7 @@ class historia_ocen(models.Model):
     wartosc = models.DecimalField(max_digits=4, decimal_places=2)
     data_zmiany = models.DateTimeField()
     nauczyciel = models.ForeignKey(nauczyciel, on_delete=models.CASCADE)
-    class Meta:
-        indexes = [
-            models.Index(fields=['ocena']),  
-        ]
+ 
 
 class zaliczenie(models.Model):
     zaliczenie_id = models.AutoField(primary_key=True)
@@ -99,7 +92,4 @@ class student_grupa(models.Model):
 
     class Meta:
         unique_together = ('student', 'grupa')
-        indexes = [
-            models.Index(fields=['student']),
-            models.Index(fields=['grupa']),
-        ]
+        
