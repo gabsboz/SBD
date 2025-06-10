@@ -17,7 +17,9 @@ BEGIN
     WHERE o.student_id = p_student_id;
   RETURN grades_cursor;
 END;
-
+```
+### 🔽 `ranking`
+```sql
 create or replace FUNCTION ranking
 RETURN SYS_REFCURSOR
 AS
@@ -34,3 +36,4 @@ BEGIN
         ORDER BY ranked.srednia DESC;
     RETURN wynik;
 END;
+```
