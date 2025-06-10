@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import make_password, check_password
 
 # ENUMY
 class Rola(models.TextChoices):
@@ -18,15 +18,28 @@ class NazwaSemestru(models.TextChoices):
 
 # MODELE
 
+
+
+
 class konto(models.Model):
     konto_id = models.AutoField(primary_key=True)
-    login = models.CharField(max_length=255)
+    login = models.CharField(max_length=255, unique=True)
     haslo = models.CharField(max_length=255)
     rola = models.CharField(max_length=20, choices=Rola.choices)
+
     def save(self, *args, **kwargs):
+        # Haszuj hasło tylko jeśli nie jest już zahashowane
         if not self.haslo.startswith('pbkdf2_'):
             self.haslo = make_password(self.haslo)
         super().save(*args, **kwargs)
+
+    def check_password(self, raw_password):
+        # Sprawdź hasło (przydatne do ręcznej autoryzacji)
+        return check_password(raw_password, self.haslo)
+
+    def __str__(self):
+        return self.login
+
 
 
 class nauczyciel(models.Model):
