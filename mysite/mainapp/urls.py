@@ -27,7 +27,7 @@ urlpatterns = [
 
     # API
     path('api/', include(router.urls)),
-    path('', api_root),
+    path('api/root/', api_root),
 
     # Widoki webowe
     path('studenci/', lista_studentow, name='lista_studentow'),
@@ -39,5 +39,5 @@ urlpatterns = [
     path('student_dashboard/', views.student_dashboard, name='student_dashboard'),
     path('moje-oceny/', views.moje_oceny, name='moje_oceny'),
 
-    # path('dashboard/', views.dashboard, name='dashboard'),  # jeśli masz dla nauczyciela/admina
+    # path('dashboard/', views.dashboard, name='dashboard'),  # dla innych ról, jeśli masz
 ]

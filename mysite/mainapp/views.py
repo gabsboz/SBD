@@ -74,7 +74,8 @@ def konto_login(request):
     else:
         form = KontoLoginForm()
 
-    return render(request, 'konto_login.html', {'form': form, 'error': error})
+    return render(request, 'mainapp/konto_login.html', {'form': form, 'error': error})
+
 
 
 def konto_logout(request):
