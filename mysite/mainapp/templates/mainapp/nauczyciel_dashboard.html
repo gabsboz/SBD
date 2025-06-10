@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8" />
+    <title>Panel Nauczyciela</title>
+</head>
+<body>
+    <h1>Witaj, {{ nauczyciel.imie }} {{ nauczyciel.nazwisko }}</h1>
+
+    <p><a href="{% url 'lista_studentow' %}">Pełna lista studentów</a></p>
+
+    <p><a href="{% url 'konto_logout' %}">Wyloguj się</a></p>
+</body>
+</html>

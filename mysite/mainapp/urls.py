@@ -38,6 +38,7 @@ urlpatterns = [
 
     path('student_dashboard/', views.student_dashboard, name='student_dashboard'),
     path('moje-oceny/', views.moje_oceny, name='moje_oceny'),
+    path('nauczyciel_dashboard/', views.nauczyciel_dashboard, name='nauczyciel_dashboard'),
 
     # path('dashboard/', views.dashboard, name='dashboard'),  # dla innych ról, jeśli masz
 ]
