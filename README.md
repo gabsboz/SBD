@@ -37,3 +37,24 @@ BEGIN
     RETURN wynik;
 END;
 ```
+### 🔽 `dodawania ocen`
+```sql
+create or replace PROCEDURE add_ocena (
+    p_wartosc NUMBER,
+    p_student_id NUMBER,
+    p_przedmiot_id NUMBER,
+    p_data_wprowadzenia DATE,
+    p_nauczyciel_id NUMBER,
+    p_semestr_id NUMBER
+)
+IS
+BEGIN
+    INSERT INTO MAINAPP_OCENA (
+        wartosc, student_id, przedmiot_id, data_wprowadzenia, nauczyciel_id, semestr_id
+    ) VALUES (
+        p_wartosc, p_student_id, p_przedmiot_id, p_data_wprowadzenia, p_nauczyciel_id, p_semestr_id
+    );
+
+    COMMIT;
+END;
+```
