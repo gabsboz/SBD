@@ -58,3 +58,23 @@ BEGIN
     COMMIT;
 END;
 ```
+### 🔽 `gr studenta`
+```sql
+CREATE OR REPLACE FUNCTION get_student_groups(p_student_id IN NUMBER)
+RETURN SYS_REFCURSOR
+AS
+    rc SYS_REFCURSOR;
+BEGIN
+    OPEN rc FOR
+        SELECT p.nazwa AS przedmiot_nazwa,
+               g.nazwa AS grupa_nazwa
+        FROM student_grupa sg
+        JOIN grupa_zajeciowa g ON sg.grupa_id = g.grupa_id
+        JOIN przedmiot p ON g.przedmiot_id = p.przedmiot_id
+        WHERE sg.student_id = p_student_id;
+
+    RETURN rc;
+END;
+/
+
+```

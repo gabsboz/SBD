@@ -78,7 +78,7 @@ def oceny_studenta(request, student_id):
     student = get_object_or_404(Student, pk=student_id)
 
     if request.method == 'POST':
-        form = DodajOceneForm(request.POST)
+        form = DodajOceneForm(request.POST, student_id=student_id)  # <-- podajemy student_id tutaj
         if form.is_valid():
             wartosc = form.cleaned_data['wartosc']
             przedmiot_obj = form.cleaned_data['przedmiot']
@@ -87,22 +87,18 @@ def oceny_studenta(request, student_id):
             semestr_obj = form.cleaned_data['semestr']
             nauczyciel_id = request.session.get('nauczyciel_id')
 
-
-            #
             with connection.cursor() as cursor:
                 try:
                     cursor.execute("""
                     BEGIN add_ocena(:wartosc, :student_id, :przedmiot_id, :data_wprowadzenia, :nauczyciel_id, :semestr_id); END;
-                """, {
-                    'wartosc': float(wartosc),
-                    'student_id': int(student_id),
-                    'przedmiot_id': int(przedmiot_obj.pk),
-                    'data_wprowadzenia': data_wprowadzenia,
-                    'nauczyciel_id': int(nauczyciel_id),
-                    'semestr_id': int(semestr_obj.pk),
-                })
-
-
+                    """, {
+                        'wartosc': float(wartosc),
+                        'student_id': int(student_id),
+                        'przedmiot_id': int(przedmiot_obj.pk),
+                        'data_wprowadzenia': data_wprowadzenia,
+                        'nauczyciel_id': int(nauczyciel_id),
+                        'semestr_id': int(semestr_obj.pk),
+                    })
                     connection.commit()
                     messages.success(request, 'Ocena została dodana.')
                     return redirect('oceny_studenta', student_id=student_id)
@@ -111,7 +107,7 @@ def oceny_studenta(request, student_id):
         else:
             messages.error(request, 'Błąd w formularzu.')
     else:
-        form = DodajOceneForm()
+        form = DodajOceneForm(student_id=student_id)  # <-- i tutaj też podajemy student_id
 
     # Pobranie ocen przez procedurę
     with connection.cursor() as cursor:
@@ -250,3 +246,35 @@ def ranking_view(request):
         })
 
     return redirect('konto_login')
+
+
+def moje_grupy(request):
+    konto_id = request.session.get('konto_id')
+
+    try:
+        konto_uzytkownika = Konto.objects.get(pk=konto_id)
+        student_obj = Student.objects.get(konto=konto_uzytkownika)
+    except (Konto.DoesNotExist, Student.DoesNotExist):
+        return redirect('konto_login')
+
+    with connection.cursor() as cursor:
+        refcursor = cursor.var(oracledb.DB_TYPE_CURSOR)
+        cursor.execute("""
+            BEGIN
+                :refcursor := get_student_groups(:student_id);
+            END;
+        """, {
+            'refcursor': refcursor,
+            'student_id': student_obj.student_id,
+        })
+
+        result_cursor = refcursor.getvalue()
+        grupy = result_cursor.fetchall()
+
+    # grupy to teraz lista krotek (przedmiot_nazwa, grupa_nazwa)
+    grupy_data = [{'przedmiot_nazwa': przedmiot, 'grupa_nazwa': grupa} for przedmiot, grupa in grupy]
+
+    return render(request, 'mainapp/moje_grupy.html', {
+        'student': student_obj,
+        'grupy': grupy_data
+    })

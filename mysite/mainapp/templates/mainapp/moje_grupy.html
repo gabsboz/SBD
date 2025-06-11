@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Moje grupy</title>
+</head>
+<body>
+
+<h2>Moje grupy zajęciowe</h2>
+
+<table border="1">
+    <tr>
+        <th>Przedmiot</th>
+        <th>Grupa</th>
+    </tr>
+    {% for grupa in grupy %}
+    <tr>
+        <td>{{ grupa.przedmiot_nazwa }}</td>
+        <td>{{ grupa.grupa_nazwa }}</td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="2">Brak przypisanych grup.</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<a href="{% url 'student_dashboard' %}">Powrót do panelu</a>
+
+</body>
+</html>

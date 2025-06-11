@@ -32,6 +32,6 @@ urlpatterns = [
     path('moje-oceny/', views.moje_oceny, name='moje_oceny'),
     path('nauczyciel_dashboard/', views.nauczyciel_dashboard, name='nauczyciel_dashboard'),
     path('ranking/', views.ranking_view, name='ranking_view'),
-    
+    path('moje_grupy/', views.moje_grupy, name='moje_grupy'),
     # path('dashboard/', views.dashboard, name='dashboard'),  # dla innych ról, jeśli masz
 ]
