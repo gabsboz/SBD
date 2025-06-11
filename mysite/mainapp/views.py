@@ -1,214 +1,86 @@
-from rest_framework import viewsets
-from .models import student as Student, ocena,nauczyciel
-from .serializers import StudentSerializer, OcenaSerializer
-from django.shortcuts import render, get_object_or_404,redirect
-from django.db import connection
-from django.http import JsonResponse
-import oracledb
-from mainapp.models import konto as Konto
-from .forms import KontoLoginForm
-from django.contrib import messages
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import KontoSerializer
 
-class StudentViewSet(viewsets.ModelViewSet):
-    queryset = Student.objects.all()
-    serializer_class = StudentSerializer
+class LoginAPIView(APIView):
+    def post(self, request):
+        konto_id = request.data.get('konto_id')
+        haslo = request.data.get('haslo')
 
-class OcenaViewSet(viewsets.ModelViewSet):
-    queryset = ocena.objects.all()
-    serializer_class = OcenaSerializer
+        if not konto_id or not haslo:
+            return Response({'error': 'konto_id i haslo wymagane'}, status=status.HTTP_400_BAD_REQUEST)
 
-def konto_login(request):
-    error = None
-
-    if request.method == 'POST':
-        form = KontoLoginForm(request.POST)
-        if form.is_valid():
-            konto_id = form.cleaned_data['konto_id']
-            haslo = form.cleaned_data['haslo']
-            try:
-                konto = Konto.objects.get(konto_id=konto_id)
-                if konto.check_password(haslo):
-                    request.session['konto_id'] = konto.konto_id
-                    request.session['rola'] = konto.rola
-                    if konto.rola == 'student':
-                        return redirect('student_dashboard')
-                    return redirect('nauczyciel_dashboard')  # lub inna strona dla innych ról
-                else:
-                    error = "Nieprawidłowe hasło"
-            except Konto.DoesNotExist:
-                error = "Konto nie istnieje"
-    else:
-        form = KontoLoginForm()
-
-    return render(request, 'mainapp/konto_login.html', {'form': form, 'error': error})
-
-
-
-def konto_logout(request):
-    request.session.flush()
-    return redirect('konto_login')
-
-
-def tylko_dla_studentow(view_func):
-    def wrapper(request, *args, **kwargs):
-        if request.session.get('rola') != 'student':
-            return redirect('konto_login')
-        return view_func(request, *args, **kwargs)
-    return wrapper
-
-def tylko_dla_nauczycieli(view_func):
-    def wrapper(request, *args, **kwargs):
-        if request.session.get('rola') != 'nauczyciel':
-            return redirect('konto_login')
-        return view_func(request, *args, **kwargs)
-    return wrapper
-
-@tylko_dla_nauczycieli
-def lista_studentow(request):
-    studenci = Student.objects.all()
-    return render(request, 'mainapp/lista_studentow.html', {'studenci': studenci})
-
-
-@tylko_dla_nauczycieli
-def oceny_studenta(request, student_id):
-    student = get_object_or_404(Student, pk=student_id)
-
-    with connection.cursor() as cursor:
-        refcursor = cursor.var(oracledb.DB_TYPE_CURSOR)
-        
-        cursor.execute("""
-            BEGIN
-                :refcursor := get_student_grades(:student_id);
-            END;
-        """, {
-            'refcursor': refcursor,
-            'student_id': student_id,
-        })
-
-        result_cursor = refcursor.getvalue()
-        grades = result_cursor.fetchall()
-
-    return render(request, 'mainapp/oceny_studenta.html', {
-        'student': student,
-        'oceny': grades
-    })
-
-
-
-
-
-
-
-
-
-@tylko_dla_studentow
-def student_dashboard(request):
-    konto_id = request.session.get('konto_id')
-
-    try:
-        konto_uzytkownika = Konto.objects.get(pk=konto_id)
-        student_obj = Student.objects.get(konto=konto_uzytkownika)
-    except (Konto.DoesNotExist, Student.DoesNotExist):
-        return redirect('konto_login')
-
-    return render(request, 'mainapp/student_dashboard.html', {
-        'student': student_obj
-    })
-
-@tylko_dla_studentow
-def moje_oceny(request):
-    konto_id = request.session.get('konto_id')
-
-    try:
-        konto_uzytkownika = Konto.objects.get(pk=konto_id)
-        student = Student.objects.get(konto=konto_uzytkownika)
-    except (Konto.DoesNotExist, Student.DoesNotExist):
-        return redirect('konto_login')
-
-    with connection.cursor() as cursor:
-        refcursor = cursor.var(oracledb.DB_TYPE_CURSOR)
-        
-        cursor.execute("""
-            BEGIN
-                :refcursor := get_student_grades(:student_id);
-            END;
-        """, {
-            'refcursor': refcursor,
-            'student_id': student.student_id,
-        })
-
-        result_cursor = refcursor.getvalue()
-        grades = result_cursor.fetchall()
-
-    return render(request, 'mainapp/oceny_studenta.html', {
-        'student': student,
-        'oceny': grades
-    })
-
-
-
-@tylko_dla_nauczycieli
-def nauczyciel_dashboard(request):
-    konto_id = request.session.get('konto_id')
-
-    try:
-        konto_uzytkownika = Konto.objects.get(pk=konto_id)
-        nauczyciel_obj = nauczyciel.objects.get(konto=konto_uzytkownika)
-    except (Konto.DoesNotExist, nauczyciel.DoesNotExist):
-        return redirect('konto_login')
-    
-    return render(request, 'mainapp/nauczyciel_dashboard.html', {
-        'nauczyciel': nauczyciel_obj
-    })
-
-def ranking_view(request):
-    rola = request.session.get('rola')
-    if rola not in ['student', 'nauczyciel']:
-        return redirect('konto_login')
-
-    with connection.cursor() as cursor:
-        refcursor = cursor.var(oracledb.DB_TYPE_CURSOR)
-
-        cursor.execute("""
-            BEGIN
-                :refcursor := ranking;
-            END;
-        """, {'refcursor': refcursor})
-
-        result_cursor = refcursor.getvalue()
-        ranking_data = result_cursor.fetchall()
-
-    ranking_list = []
-    for idx, (student_id, srednia) in enumerate(ranking_data, start=1):
-        ranking_list.append({
-            'pozycja': idx,
-            'student_id': student_id,
-            'srednia': srednia,
-        })
-
-    if rola == 'student':
-        konto_id = request.session.get('konto_id')
         try:
-            konto = Konto.objects.get(pk=konto_id)
-            student = Student.objects.get(konto=konto)
-        except (Konto.DoesNotExist, Student.DoesNotExist):
-            return redirect('konto_login')
+            konto = Konto.objects.get(konto_id=konto_id)
+        except Konto.DoesNotExist:
+            return Response({'error': 'Konto nie istnieje'}, status=status.HTTP_404_NOT_FOUND)
 
-        for r in ranking_list:
-            if r['student_id'] == student.student_id:
-                return render(request, 'mainapp/student_ranking.html', {
-                    'moje_miejsce': r['pozycja'],
-                    'moja_srednia': r['srednia']
-                })
+        if not konto.check_password(haslo):
+            return Response({'error': 'Nieprawidłowe hasło'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        return render(request, 'mainapp/student_ranking.html', {
-            'moje_miejsce': None,
-            'moja_srednia': 0
-        })
+        # ustaw sesję (jeśli chcesz)
+        request.session['konto_id'] = konto.konto_id
+        request.session['rola'] = konto.rola
 
-    elif rola == 'nauczyciel':
-        return render(request, 'mainapp/ranking_lista.html', {
-            'ranking': ranking_list
-        })
+        serializer = KontoSerializer(konto)
+        return Response({'message': 'Zalogowano', 'konto': serializer.data})
 
-    return redirect('konto_login')
+from rest_framework.permissions import BasePermission
+
+class IsStudent(BasePermission):
+    def has_permission(self, request, view):
+        return request.session.get('rola') == 'student'
+
+class IsNauczyciel(BasePermission):
+    def has_permission(self, request, view):
+        return request.session.get('rola') == 'nauczyciel'
+
+class RankingAPIView(APIView):
+
+    def get(self, request):
+        rola = request.session.get('rola')
+        if rola not in ['student', 'nauczyciel']:
+            return Response({'error': 'Nieautoryzowany'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        with connection.cursor() as cursor:
+            refcursor = cursor.var(oracledb.DB_TYPE_CURSOR)
+
+            cursor.execute("""
+                BEGIN
+                    :refcursor := ranking;
+                END;
+            """, {'refcursor': refcursor})
+
+            result_cursor = refcursor.getvalue()
+            ranking_data = result_cursor.fetchall()
+
+        ranking_list = []
+        for idx, (student_id, srednia) in enumerate(ranking_data, start=1):
+            ranking_list.append({
+                'pozycja': idx,
+                'student_id': student_id,
+                'srednia': srednia,
+            })
+
+        if rola == 'student':
+            konto_id = request.session.get('konto_id')
+            try:
+                konto = Konto.objects.get(pk=konto_id)
+                student = Student.objects.get(konto=konto)
+            except (Konto.DoesNotExist, Student.DoesNotExist):
+                return Response({'error': 'Konto lub student nie znalezione'}, status=status.HTTP_401_UNAUTHORIZED)
+
+            moje_miejsce = None
+            moja_srednia = 0
+            for r in ranking_list:
+                if r['student_id'] == student.student_id:
+                    moje_miejsce = r['pozycja']
+                    moja_srednia = r['srednia']
+                    break
+
+            return Response({'moje_miejsce': moje_miejsce, 'moja_srednia': moja_srednia})
+
+        elif rola == 'nauczyciel':
+            return Response({'ranking': ranking_list})
+
