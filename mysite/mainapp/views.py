@@ -1,18 +1,16 @@
-
-from .models import student as Student, ocena,nauczyciel,przedmiot
-
-from django.shortcuts import render, get_object_or_404,redirect
+from .models import student as Student, ocena, nauczyciel, przedmiot
+from django.shortcuts import render, get_object_or_404, redirect
 from django.db import connection
 from django.http import JsonResponse
 import oracledb
 from mainapp.models import konto as Konto
-from .forms import KontoLoginForm,DodajOceneForm
+from .forms import KontoLoginForm, DodajOceneForm
 from django.contrib import messages
 from django.utils import timezone
 
 
-
 def konto_login(request):
+    # Logowanie użytkownika – obsługa formularza
     error = None
 
     if request.method == 'POST':
@@ -22,17 +20,18 @@ def konto_login(request):
             haslo = form.cleaned_data['haslo']
             try:
                 konto = Konto.objects.get(konto_id=konto_id)
-                if konto.check_password(haslo):
+                if konto.check_password(haslo):  # Sprawdź hasło
+                    # Ustaw dane sesji
                     request.session['konto_id'] = konto.konto_id
                     request.session['rola'] = konto.rola
 
                     if konto.rola == 'student':
-                        # Zapamiętaj również student_id w sesji
+                        # Zapamiętaj id studenta w sesji
                         student_obj = Student.objects.get(konto=konto)
                         request.session['student_id'] = student_obj.student_id
                         return redirect('student_dashboard')
                     else:
-                        # Zapamiętaj nauczyciel_id
+                        # Zapamiętaj id nauczyciela w sesji
                         nauczyciel_obj = nauczyciel.objects.get(konto=konto)
                         request.session['nauczyciel_id'] = nauczyciel_obj.pk
                         return redirect('nauczyciel_dashboard')
@@ -45,48 +44,57 @@ def konto_login(request):
     else:
         form = KontoLoginForm()
 
+    # Renderuj formularz logowania z ewentualnym błędem
     return render(request, 'mainapp/konto_login.html', {'form': form, 'error': error})
 
 
 def konto_logout(request):
+    # Wyczyść sesję i wyloguj użytkownika
     request.session.flush()
     return redirect('konto_login')
 
 
 def tylko_dla_studentow(view_func):
+    # Dekorator blokujący dostęp jeśli rola to nie student
     def wrapper(request, *args, **kwargs):
         if request.session.get('rola') != 'student':
             return redirect('konto_login')
         return view_func(request, *args, **kwargs)
     return wrapper
 
+
 def tylko_dla_nauczycieli(view_func):
+    # Dekorator blokujący dostęp jeśli rola to nie nauczyciel
     def wrapper(request, *args, **kwargs):
         if request.session.get('rola') != 'nauczyciel':
             return redirect('konto_login')
         return view_func(request, *args, **kwargs)
     return wrapper
 
+
 @tylko_dla_nauczycieli
 def lista_studentow(request):
+    # Lista wszystkich studentów, dostępna tylko dla nauczycieli
     studenci = Student.objects.all()
     return render(request, 'mainapp/lista_studentow.html', {'studenci': studenci})
 
 
 @tylko_dla_nauczycieli
 def oceny_studenta(request, student_id):
+    # Widok do dodawania i wyświetlania ocen konkretnego studenta
     student = get_object_or_404(Student, pk=student_id)
 
     if request.method == 'POST':
-        form = DodajOceneForm(request.POST, student_id=student_id)  # <-- podajemy student_id tutaj
+        # Formularz do dodania oceny, ograniczony do przedmiotów studenta
+        form = DodajOceneForm(request.POST, student_id=student_id)  # ważne podanie student_id do formy
         if form.is_valid():
             wartosc = form.cleaned_data['wartosc']
             przedmiot_obj = form.cleaned_data['przedmiot']
             data_wprowadzenia = timezone.now().replace(tzinfo=None)
-
             semestr_obj = form.cleaned_data['semestr']
             nauczyciel_id = request.session.get('nauczyciel_id')
 
+            # Wywołanie procedury PL/SQL do dodania oceny
             with connection.cursor() as cursor:
                 try:
                     cursor.execute("""
@@ -107,9 +115,9 @@ def oceny_studenta(request, student_id):
         else:
             messages.error(request, 'Błąd w formularzu.')
     else:
-        form = DodajOceneForm(student_id=student_id)  # <-- i tutaj też podajemy student_id
+        form = DodajOceneForm(student_id=student_id)  # podajemy student_id aby filtrować przedmioty
 
-    # Pobranie ocen przez procedurę
+    # Pobierz oceny studenta przez procedurę bazodanową
     with connection.cursor() as cursor:
         refcursor = cursor.var(oracledb.DB_TYPE_CURSOR)
         cursor.execute("""
@@ -131,12 +139,9 @@ def oceny_studenta(request, student_id):
     })
 
 
-
-
-
-
 @tylko_dla_studentow
 def student_dashboard(request):
+    # Kokpit studenta, pobiera dane o użytkowniku z sesji i wyświetla
     konto_id = request.session.get('konto_id')
 
     try:
@@ -149,8 +154,10 @@ def student_dashboard(request):
         'student': student_obj
     })
 
+
 @tylko_dla_studentow
 def moje_oceny(request):
+    # Widok ocen zalogowanego studenta (pobierane przez procedurę)
     konto_id = request.session.get('konto_id')
 
     try:
@@ -180,9 +187,9 @@ def moje_oceny(request):
     })
 
 
-
 @tylko_dla_nauczycieli
 def nauczyciel_dashboard(request):
+    # Kokpit nauczyciela, pokazuje jego dane
     konto_id = request.session.get('konto_id')
 
     try:
@@ -195,11 +202,14 @@ def nauczyciel_dashboard(request):
         'nauczyciel': nauczyciel_obj
     })
 
+
 def ranking_view(request):
+    # Ranking – widok dostępny dla zalogowanych studentów i nauczycieli
     rola = request.session.get('rola')
     if rola not in ['student', 'nauczyciel']:
         return redirect('konto_login')
 
+    # Pobierz ranking z bazy (procedura lub funkcja)
     with connection.cursor() as cursor:
         refcursor = cursor.var(oracledb.DB_TYPE_CURSOR)
 
@@ -212,6 +222,7 @@ def ranking_view(request):
         result_cursor = refcursor.getvalue()
         ranking_data = result_cursor.fetchall()
 
+    # Przerób wynik na listę słowników z pozycją w rankingu
     ranking_list = []
     for idx, (student_id, srednia) in enumerate(ranking_data, start=1):
         ranking_list.append({
@@ -228,6 +239,7 @@ def ranking_view(request):
         except (Konto.DoesNotExist, Student.DoesNotExist):
             return redirect('konto_login')
 
+        # Znajdź miejsce i średnią aktualnego studenta
         for r in ranking_list:
             if r['student_id'] == student.student_id:
                 return render(request, 'mainapp/student_ranking.html', {
@@ -235,12 +247,14 @@ def ranking_view(request):
                     'moja_srednia': r['srednia']
                 })
 
+        # Jeśli brak w rankingu, pokaż zero
         return render(request, 'mainapp/student_ranking.html', {
             'moje_miejsce': None,
             'moja_srednia': 0
         })
 
     elif rola == 'nauczyciel':
+        # Dla nauczyciela pokaz całą listę
         return render(request, 'mainapp/ranking_lista.html', {
             'ranking': ranking_list
         })
@@ -249,6 +263,7 @@ def ranking_view(request):
 
 
 def moje_grupy(request):
+    # Widok grup dla zalogowanego studenta (wywołanie procedury)
     konto_id = request.session.get('konto_id')
 
     try:
@@ -271,7 +286,7 @@ def moje_grupy(request):
         result_cursor = refcursor.getvalue()
         grupy = result_cursor.fetchall()
 
-    # grupy to teraz lista krotek (przedmiot_nazwa, grupa_nazwa)
+    # Zamiana wyniku na listę słowników do łatwego wyświetlania w template
     grupy_data = [{'przedmiot_nazwa': przedmiot, 'grupa_nazwa': grupa} for przedmiot, grupa in grupy]
 
     return render(request, 'mainapp/moje_grupy.html', {

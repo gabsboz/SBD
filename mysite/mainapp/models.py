@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
 
-# ENUMY
+# ENUMY (czyli stałe wartości, żeby nie wpisywać stringów na sztywno)
 class Rola(models.TextChoices):
     STUDENT = 'student', 'student'
     NAUCZYCIEL = 'nauczyciel', 'nauczyciel'
@@ -16,10 +16,8 @@ class NazwaSemestru(models.TextChoices):
     LETNI = 'letni', 'letni'
     ZIMOWY = 'zimowy', 'zimowy'
 
-# MODELE
 
-
-
+# MODELE:
 
 class konto(models.Model):
     konto_id = models.AutoField(primary_key=True)
@@ -34,12 +32,11 @@ class konto(models.Model):
         super().save(*args, **kwargs)
 
     def check_password(self, raw_password):
-        # Sprawdź hasło (przydatne do ręcznej autoryzacji)
+        # Metoda do sprawdzenia hasła — użyteczne w loginie
         return check_password(raw_password, self.haslo)
 
     def __str__(self):
         return self.login
-
 
 
 class nauczyciel(models.Model):
@@ -48,6 +45,8 @@ class nauczyciel(models.Model):
     nazwisko = models.CharField(max_length=255)
     tytul = models.CharField(max_length=255)
     konto = models.ForeignKey(konto, on_delete=models.CASCADE)
+    # powiązanie z kontem, przy usunięciu konta idzie też nauczyciel
+
 
 class student(models.Model):
     student_id = models.AutoField(primary_key=True)
@@ -56,6 +55,8 @@ class student(models.Model):
     kierunek = models.CharField(max_length=255)
     rok_studiow = models.IntegerField()
     konto = models.ForeignKey(konto, on_delete=models.CASCADE)
+    # analogicznie jak u nauczyciela
+
 
 class przedmiot(models.Model):
     przedmiot_id = models.AutoField(primary_key=True)
@@ -67,6 +68,7 @@ class przedmiot(models.Model):
     def __str__(self):
         return self.nazwa
 
+
 class semestr(models.Model):
     semestr_id = models.AutoField(primary_key=True)
     nazwa = models.CharField(max_length=10, choices=NazwaSemestru.choices)
@@ -76,15 +78,17 @@ class semestr(models.Model):
     def __str__(self):
         return self.nazwa
 
+
 class ocena(models.Model):
     ocena_id = models.AutoField(primary_key=True)
-    wartosc = models.DecimalField(max_digits=4, decimal_places=2)
+    wartosc = models.DecimalField(max_digits=4, decimal_places=2)  # np. 4.5
     student = models.ForeignKey(student, on_delete=models.CASCADE)
     przedmiot = models.ForeignKey(przedmiot, on_delete=models.CASCADE)
     data_wprowadzenia = models.DateTimeField()
     nauczyciel = models.ForeignKey(nauczyciel, on_delete=models.CASCADE)
     semestr = models.ForeignKey(semestr, on_delete=models.CASCADE)
-    
+    # ocena powiązana z konkretnym studentem, przedmiotem, nauczycielem i semestrem
+
 
 class historia_ocen(models.Model):
     historia_id = models.AutoField(primary_key=True)
@@ -92,23 +96,27 @@ class historia_ocen(models.Model):
     wartosc = models.DecimalField(max_digits=4, decimal_places=2)
     data_zmiany = models.DateTimeField()
     nauczyciel = models.ForeignKey(nauczyciel, on_delete=models.CASCADE)
- 
+    # zapis zmian oceny, kto i kiedy zmienił
+
 
 class zaliczenie(models.Model):
     zaliczenie_id = models.AutoField(primary_key=True)
     przedmiot = models.ForeignKey(przedmiot, on_delete=models.CASCADE)
     typ = models.CharField(max_length=20, choices=TypZaliczenia.choices)
     data = models.DateTimeField()
+    # zaliczenie z określonym typem (egzamin, projekt itp.)
+
 
 class grupa_zajeciowa(models.Model):
     grupa_id = models.AutoField(primary_key=True)
     nazwa = models.CharField(max_length=255)
     przedmiot = models.ForeignKey(przedmiot, on_delete=models.CASCADE)
+    # grupa powiązana z przedmiotem
+
 
 class student_grupa(models.Model):
     student = models.ForeignKey(student, on_delete=models.CASCADE)
     grupa = models.ForeignKey(grupa_zajeciowa, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ('student', 'grupa')
-        
+        unique_together = ('student', 'grupa')  # jeden student może być tylko raz w danej grupie
