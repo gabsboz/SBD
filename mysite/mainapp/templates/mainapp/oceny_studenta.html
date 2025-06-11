@@ -17,6 +17,27 @@
                 <td>{{ ocena.2 }}</td>
                 <td>{{ ocena.3 }}</td>
             </tr>
+        {% empty %}
+            <tr><td colspan="4">Brak ocen.</td></tr>
         {% endfor %}
     </tbody>
 </table>
+
+{% if request.session.rola == 'nauczyciel' %}
+    <h2>Dodaj ocenę</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Dodaj ocenę</button>
+    </form>
+{% endif %}
+{% if messages %}
+  <div>
+    {% for message in messages %}
+      <p style="color: {% if message.tags == 'error' %}red{% else %}green{% endif %};">
+        {{ message }}
+      </p>
+    {% endfor %}
+  </div>
+{% endif %}
+

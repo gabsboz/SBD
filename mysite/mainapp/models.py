@@ -64,11 +64,17 @@ class przedmiot(models.Model):
     kierunek = models.CharField(max_length=255)
     rok_studiow = models.IntegerField()
 
+    def __str__(self):
+        return self.nazwa
+
 class semestr(models.Model):
     semestr_id = models.AutoField(primary_key=True)
     nazwa = models.CharField(max_length=10, choices=NazwaSemestru.choices)
     data_rozpoczecia = models.DateField()
     data_zakonczenia = models.DateField()
+
+    def __str__(self):
+        return self.nazwa
 
 class ocena(models.Model):
     ocena_id = models.AutoField(primary_key=True)

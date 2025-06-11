@@ -1,21 +1,16 @@
-from rest_framework import viewsets
-from .models import student as Student, ocena,nauczyciel
-from .serializers import StudentSerializer, OcenaSerializer
+
+from .models import student as Student, ocena,nauczyciel,przedmiot
+
 from django.shortcuts import render, get_object_or_404,redirect
 from django.db import connection
 from django.http import JsonResponse
 import oracledb
 from mainapp.models import konto as Konto
-from .forms import KontoLoginForm
+from .forms import KontoLoginForm,DodajOceneForm
 from django.contrib import messages
+from django.utils import timezone
 
-class StudentViewSet(viewsets.ModelViewSet):
-    queryset = Student.objects.all()
-    serializer_class = StudentSerializer
 
-class OcenaViewSet(viewsets.ModelViewSet):
-    queryset = ocena.objects.all()
-    serializer_class = OcenaSerializer
 
 def konto_login(request):
     error = None
@@ -30,18 +25,27 @@ def konto_login(request):
                 if konto.check_password(haslo):
                     request.session['konto_id'] = konto.konto_id
                     request.session['rola'] = konto.rola
+
                     if konto.rola == 'student':
+                        # Zapamiętaj również student_id w sesji
+                        student_obj = Student.objects.get(konto=konto)
+                        request.session['student_id'] = student_obj.student_id
                         return redirect('student_dashboard')
-                    return redirect('nauczyciel_dashboard')  # lub inna strona dla innych ról
+                    else:
+                        # Zapamiętaj nauczyciel_id
+                        nauczyciel_obj = nauczyciel.objects.get(konto=konto)
+                        request.session['nauczyciel_id'] = nauczyciel_obj.pk
+                        return redirect('nauczyciel_dashboard')
                 else:
                     error = "Nieprawidłowe hasło"
             except Konto.DoesNotExist:
                 error = "Konto nie istnieje"
+            except (Student.DoesNotExist, nauczyciel.DoesNotExist):
+                error = "Nie znaleziono przypisanego użytkownika."
     else:
         form = KontoLoginForm()
 
     return render(request, 'mainapp/konto_login.html', {'form': form, 'error': error})
-
 
 
 def konto_logout(request):
@@ -73,9 +77,45 @@ def lista_studentow(request):
 def oceny_studenta(request, student_id):
     student = get_object_or_404(Student, pk=student_id)
 
+    if request.method == 'POST':
+        form = DodajOceneForm(request.POST)
+        if form.is_valid():
+            wartosc = form.cleaned_data['wartosc']
+            przedmiot_obj = form.cleaned_data['przedmiot']
+            data_wprowadzenia = timezone.now().replace(tzinfo=None)
+
+            semestr_obj = form.cleaned_data['semestr']
+            nauczyciel_id = request.session.get('nauczyciel_id')
+
+
+            #
+            with connection.cursor() as cursor:
+                try:
+                    cursor.execute("""
+                    BEGIN add_ocena(:wartosc, :student_id, :przedmiot_id, :data_wprowadzenia, :nauczyciel_id, :semestr_id); END;
+                """, {
+                    'wartosc': float(wartosc),
+                    'student_id': int(student_id),
+                    'przedmiot_id': int(przedmiot_obj.pk),
+                    'data_wprowadzenia': data_wprowadzenia,
+                    'nauczyciel_id': int(nauczyciel_id),
+                    'semestr_id': int(semestr_obj.pk),
+                })
+
+
+                    connection.commit()
+                    messages.success(request, 'Ocena została dodana.')
+                    return redirect('oceny_studenta', student_id=student_id)
+                except Exception as e:
+                    messages.error(request, f'Błąd: {e}')
+        else:
+            messages.error(request, 'Błąd w formularzu.')
+    else:
+        form = DodajOceneForm()
+
+    # Pobranie ocen przez procedurę
     with connection.cursor() as cursor:
         refcursor = cursor.var(oracledb.DB_TYPE_CURSOR)
-        
         cursor.execute("""
             BEGIN
                 :refcursor := get_student_grades(:student_id);
@@ -90,11 +130,9 @@ def oceny_studenta(request, student_id):
 
     return render(request, 'mainapp/oceny_studenta.html', {
         'student': student,
-        'oceny': grades
+        'oceny': grades,
+        'form': form,
     })
-
-
-
 
 
 
