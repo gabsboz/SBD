@@ -34,7 +34,7 @@
 {% if messages %}
   <div>
     {% for message in messages %}
-      <p style="color: {% if message.tags == 'error' %}red{% else %}green{% endif %};">
+      <p>
         {{ message }}
       </p>
     {% endfor %}
