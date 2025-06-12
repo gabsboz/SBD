@@ -170,12 +170,14 @@ def oceny_studenta(request, student_id):
         srednia = sum(grade[1] for grade in grades) / len(grades)
     else:
         srednia = 0
+    
 
     return render(request, 'mainapp/oceny_studenta.html', {
         'student': student,
         'oceny': grades,
         'form': form,
-        'OCENA_CHOICES': OCENA_CHOICES,  
+        'OCENA_CHOICES': OCENA_CHOICES,
+        'srednia_ocen': round(srednia, 2)  
     })
 
 
@@ -226,6 +228,7 @@ def moje_oceny(request):
         srednia = sum(grade[1] for grade in grades) / len(grades)
     else:
         srednia = 0
+
 
     return render(request, 'mainapp/oceny_studenta.html', {
         'student': student,
