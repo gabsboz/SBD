@@ -7,28 +7,54 @@
             <th>Wartość</th>
             <th>Data</th>
             <th>Przedmiot</th>
+            {% if request.session.rola == 'nauczyciel' %}
+                <th>Akcje</th>
+            {% endif %}
         </tr>
     </thead>
     <tbody>
         {% for ocena in oceny %}
-            <tr>
-                <td>{{ ocena.0 }}</td>
-                <td>{{ ocena.1 }}</td>
-                <td>{{ ocena.2 }}</td>
-                <td>{{ ocena.3 }}</td>
-            </tr>
-        {% empty %}
-            <tr><td colspan="4">Brak ocen.</td></tr>
+        <tr>
+            <td>{{ ocena.0 }}</td>
+            <td>
+                {% if request.session.rola == 'nauczyciel' %}
+                    <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="ocena_id" value="{{ ocena.0 }}">
+                        <select name="nowa_wartosc" required>
+                            {% for wartosc, label in OCENA_CHOICES %}
+                                <option value="{{ wartosc }}" {% if wartosc == ocena.1 %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" name="edit_ocene">Aktualizuj</button>
+                    </form>
+                {% else %}
+                    {{ ocena.1 }}
+                {% endif %}
+            </td>
+            <td>{{ ocena.3 }}</td>
+            <td>{{ ocena.4 }}</td>
+            {% if request.session.rola == 'nauczyciel' %}
+            <td>
+                <form method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="ocena_id" value="{{ ocena.0 }}">
+                    <button type="submit" name="usun_ocene">Usuń</button>
+                </form>
+            </td>
+            {% endif %}
+        </tr>
         {% endfor %}
     </tbody>
 </table>
 
-{% if srednia_ocen >= 3 %}
-    <p style="color: green; font-weight: bold;">zaliczone.</p>
-{% else %}
-    <p style="color: red; font-weight: bold;">niezaliczone.</p>
+{% if request.session.rola == 'student' %}
+    {% if srednia >= 3 %}
+        <p style="color: green; font-weight: bold;">Zaliczone.</p>
+    {% else %}
+        <p style="color: red; font-weight: bold;">Niezaliczone.</p>
+    {% endif %}
 {% endif %}
-
 
 {% if request.session.rola == 'nauczyciel' %}
     <h2>Dodaj ocenę</h2>
@@ -38,13 +64,11 @@
         <button type="submit">Dodaj ocenę</button>
     </form>
 {% endif %}
+
 {% if messages %}
   <div>
     {% for message in messages %}
-      <p>
-        {{ message }}
-      </p>
+      <p>{{ message }}</p>
     {% endfor %}
   </div>
 {% endif %}
-

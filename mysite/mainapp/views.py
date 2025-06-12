@@ -7,6 +7,7 @@ from mainapp.models import konto as Konto
 from .forms import KontoLoginForm, DodajOceneForm
 from django.contrib import messages
 from django.utils import timezone
+from .forms import OCENA_CHOICES
 
 
 def konto_login(request):
@@ -81,62 +82,103 @@ def lista_studentow(request):
 
 @tylko_dla_nauczycieli
 def oceny_studenta(request, student_id):
-    # Widok do dodawania i wyświetlania ocen konkretnego studenta
+    # Widok do dodawania, edycji i usuwania ocen konkretnego studenta
     student = get_object_or_404(Student, pk=student_id)
 
     if request.method == 'POST':
-        # Formularz do dodania oceny, ograniczony do przedmiotów studenta
-        form = DodajOceneForm(request.POST, student_id=student_id)  # ważne podanie student_id do formy
-        if form.is_valid():
-            wartosc = form.cleaned_data['wartosc']
-            przedmiot_obj = form.cleaned_data['przedmiot']
-            data_wprowadzenia = timezone.now().replace(tzinfo=None)
-            semestr_obj = form.cleaned_data['semestr']
-            nauczyciel_id = request.session.get('nauczyciel_id')
-
-            # Wywołanie procedury PL/SQL do dodania oceny
-            with connection.cursor() as cursor:
+        if 'usun_ocene' in request.POST:
+            # Obsługa usuwania oceny
+            ocena_id = request.POST.get('ocena_id')
+            if ocena_id:
                 try:
-                    cursor.execute("""
-                    BEGIN add_ocena(:wartosc, :student_id, :przedmiot_id, :data_wprowadzenia, :nauczyciel_id, :semestr_id); END;
-                    """, {
-                        'wartosc': float(wartosc),
-                        'student_id': int(student_id),
-                        'przedmiot_id': int(przedmiot_obj.pk),
-                        'data_wprowadzenia': data_wprowadzenia,
-                        'nauczyciel_id': int(nauczyciel_id),
-                        'semestr_id': int(semestr_obj.pk),
-                    })
-                    connection.commit()
+                    with connection.cursor() as cursor:
+                        cursor.execute("""
+                            BEGIN student_pkg.delete_ocena(:ocena_id); END;
+                        """, {'ocena_id': int(ocena_id)})
+                        connection.commit()
+                    messages.success(request, 'Ocena została usunięta.')
+                except Exception as e:
+                    messages.error(request, f'Błąd podczas usuwania: {e}')
+            return redirect('oceny_studenta', student_id=student_id)
+
+        elif 'edit_ocene' in request.POST:
+            # Obsługa edycji oceny
+            ocena_id = request.POST.get('ocena_id')
+            nowa_wartosc = request.POST.get('nowa_wartosc')
+            if ocena_id and nowa_wartosc:
+                try:
+                    with connection.cursor() as cursor:
+                        cursor.execute("""
+                            BEGIN student_pkg.update_ocena(:p_ocena_id, :p_nowa_wartosc); END;
+                        """, {
+                            'p_ocena_id': int(ocena_id),
+                            'p_nowa_wartosc': float(nowa_wartosc)
+                        })
+                        connection.commit()
+                    messages.success(request, 'Ocena została zaktualizowana.')
+                except Exception as e:
+                    messages.error(request, f'Błąd podczas edycji: {e}')
+            return redirect('oceny_studenta', student_id=student_id)
+
+        else:
+            # Dodawanie oceny
+            form = DodajOceneForm(request.POST, student_id=student_id)
+            if form.is_valid():
+                wartosc = form.cleaned_data['wartosc']
+                przedmiot_obj = form.cleaned_data['przedmiot']
+                data_wprowadzenia = timezone.now().replace(tzinfo=None)
+                semestr_obj = form.cleaned_data['semestr']
+                nauczyciel_id = request.session.get('nauczyciel_id')
+
+                try:
+                    with connection.cursor() as cursor:
+                        cursor.execute("""
+                            BEGIN student_pkg.add_ocena(:wartosc, :student_id, :przedmiot_id, :data_wprowadzenia, :nauczyciel_id, :semestr_id); END;
+                        """, {
+                            'wartosc': float(wartosc),
+                            'student_id': int(student_id),
+                            'przedmiot_id': int(przedmiot_obj.pk),
+                            'data_wprowadzenia': data_wprowadzenia,
+                            'nauczyciel_id': int(nauczyciel_id),
+                            'semestr_id': int(semestr_obj.pk),
+                        })
+                        connection.commit()
                     messages.success(request, 'Ocena została dodana.')
                     return redirect('oceny_studenta', student_id=student_id)
                 except Exception as e:
                     messages.error(request, f'Błąd: {e}')
-        else:
-            messages.error(request, 'Błąd w formularzu.')
+            else:
+                messages.error(request, 'Błąd w formularzu.')
     else:
-        form = DodajOceneForm(student_id=student_id)  # podajemy student_id aby filtrować przedmioty
+        form = DodajOceneForm(student_id=student_id)
 
-    # Pobierz oceny studenta przez procedurę bazodanową
+    # Pobierz oceny studenta przez procedurę
     with connection.cursor() as cursor:
         refcursor = cursor.var(oracledb.DB_TYPE_CURSOR)
         cursor.execute("""
             BEGIN
-                :refcursor := get_student_grades(:student_id);
+                :refcursor := student_pkg.get_student_grades(:student_id);
             END;
         """, {
             'refcursor': refcursor,
             'student_id': student_id,
         })
-
         result_cursor = refcursor.getvalue()
         grades = result_cursor.fetchall()
+
+    if grades:
+        srednia = sum(grade[1] for grade in grades) / len(grades)
+    else:
+        srednia = 0
 
     return render(request, 'mainapp/oceny_studenta.html', {
         'student': student,
         'oceny': grades,
         'form': form,
+        'OCENA_CHOICES': OCENA_CHOICES,  
     })
+
+
 
 
 @tylko_dla_studentow
@@ -169,7 +211,7 @@ def moje_oceny(request):
         refcursor = cursor.var(oracledb.DB_TYPE_CURSOR)
         cursor.execute("""
             BEGIN
-                :refcursor := get_student_grades(:student_id);
+                :refcursor := student_pkg.get_student_grades(:student_id);
             END;
         """, {
             'refcursor': refcursor,
@@ -221,7 +263,7 @@ def ranking_view(request):
 
         cursor.execute("""
             BEGIN
-                :refcursor := ranking;
+                :refcursor := student_pkg.ranking;
             END;
         """, {'refcursor': refcursor})
 
@@ -282,7 +324,7 @@ def moje_grupy(request):
         refcursor = cursor.var(oracledb.DB_TYPE_CURSOR)
         cursor.execute("""
             BEGIN
-                :refcursor := get_student_groups(:student_id);
+                :refcursor := student_pkg.get_student_groups(:student_id);
             END;
         """, {
             'refcursor': refcursor,
@@ -296,7 +338,7 @@ def moje_grupy(request):
         refcursor2 = cursor.var(oracledb.DB_TYPE_CURSOR)
         cursor.execute("""
             BEGIN
-                :refcursor := get_student_zaliczenia(:student_id);
+                :refcursor := student_pkg.get_student_zaliczenia(:student_id);
             END;
         """, {
             'refcursor': refcursor2,
