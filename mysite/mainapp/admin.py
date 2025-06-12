@@ -64,7 +64,7 @@ class OcenaAdmin(admin.ModelAdmin):
 
 @admin.register(historia_ocen)
 class HistoriaOcenAdmin(admin.ModelAdmin):
-    list_display = ('historia_id', 'ocena', 'wartosc', 'data_zmiany', 'nauczyciel')
+    list_display = ['historia_id', 'ocena', 'wartosc', 'data_zmiany', 'nauczyciel']
     list_filter = ('nauczyciel',)
 
 
