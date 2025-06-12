@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Ranking studentów</title>
+    <title>Statystyki przedmiotów</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -34,54 +34,51 @@
         tr:hover {
             background-color: #f5f5f5;
         }
-        .pozycja {
-            font-weight: bold;
-            color: #1976d2;
-        }
-        .srednia {
+        .number {
+            text-align: center;
             font-weight: bold;
         }
         .back-link {
             display: inline-block;
             margin-top: 20px;
             padding: 10px 15px;
-            background: #2196f3;
+            background: #4caf50;
             color: white;
             text-decoration: none;
             border-radius: 5px;
         }
         .back-link:hover {
-            background: #1976d2;
+            background: #388e3c;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🏆 Ranking studentów</h1>
-        <p>Łączna liczba studentów w rankingu: <strong>{{ ranking|length }}</strong></p>
+        <h1>📊 Statystyki przedmiotów</h1>
+        <h2>{{ nauczyciel.tytul }} {{ nauczyciel.imie }} {{ nauczyciel.nazwisko }}</h2>
 
         <table>
             <thead>
                 <tr>
-                    <th>Miejsce</th>
-                    <th>Student</th>
-                    <th>Kierunek</th>
-                    <th>Rok studiów</th>
+                    <th>Przedmiot</th>
+                    <th>Liczba ocen</th>
                     <th>Średnia ocen</th>
+                    <th>Min. ocena</th>
+                    <th>Max. ocena</th>
                 </tr>
             </thead>
             <tbody>
-                {% for r in ranking %}
+                {% for stat in statystyki %}
                 <tr>
-                    <td class="pozycja">{{ r.pozycja }}</td>
-                    <td>{{ r.student_name }}</td>
-                    <td>{{ r.kierunek }}</td>
-                    <td>{{ r.rok_studiow }}</td>
-                    <td class="srednia">{{ r.srednia }}</td>
+                    <td>{{ stat.0 }}</td>
+                    <td class="number">{{ stat.1 }}</td>
+                    <td class="number">{{ stat.2 }}</td>
+                    <td class="number">{{ stat.3|default:"-" }}</td>
+                    <td class="number">{{ stat.4|default:"-" }}</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5">Brak danych w rankingu.</td>
+                    <td colspan="5">Brak danych o przedmiotach.</td>
                 </tr>
                 {% endfor %}
             </tbody>

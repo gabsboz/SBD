@@ -3,12 +3,85 @@
 <head>
     <meta charset="UTF-8" />
     <title>Panel Nauczyciela</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .dashboard {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+        .menu {
+            list-style: none;
+            padding: 0;
+        }
+        .menu li {
+            margin: 10px 0;
+        }
+        .menu a {
+            display: block;
+            padding: 10px 15px;
+            background: #4caf50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        .menu a:hover {
+            background: #388e3c;
+        }
+    </style>
 </head>
 <body>
-    <h1>Witaj, {{ nauczyciel.imie }} {{ nauczyciel.nazwisko }}</h1>
+    <div class="dashboard">
+        <h1>Witaj, {{ nauczyciel.tytul }} {{ nauczyciel.imie }} {{ nauczyciel.nazwisko }}</h1>
 
-    <p><a href="{% url 'lista_studentow' %}">Pełna lista studentów</a></p>
-    <p><a href="{% url 'ranking_view' %}">Zobacz ranking studentów</a></p>
-    <p><a href="{% url 'konto_logout' %}">Wyloguj się</a></p>
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ liczba_ocen }}</div>
+                <div>Wystawione oceny</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ liczba_przedmiotow }}</div>
+                <div>Prowadzone przedmioty</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ srednia_ocen }}</div>
+                <div>Średnia wystawianych ocen</div>
+            </div>
+        </div>
+
+        <ul class="menu">
+            <li><a href="{% url 'lista_studentow' %}">👥 Pełna lista studentów</a></li>
+            <li><a href="{% url 'ranking_view' %}">🏆 Zobacz ranking studentów</a></li>
+            <li><a href="{% url 'statystyki_przedmiotow' %}">📊 Statystyki przedmiotów</a></li>
+            <li><a href="{% url 'eksport_ocen_csv' %}">📄 Eksportuj oceny do CSV</a></li>
+            <li><a href="{% url 'statystyki_ogolne' %}">📈 Statystyki ogólne</a></li>
+            <li><a href="{% url 'konto_logout' %}">🚪 Wyloguj się</a></li>
+        </ul>
+    </div>
 </body>
 </html>
