@@ -41,10 +41,4 @@ urlpatterns = [
 
     # Widok grup studenta
     path('moje_grupy/', views.moje_grupy, name='moje_grupy'),
-
-    # Nowe funkcjonalności
-    path('statystyki-przedmiotow/', views.statystyki_przedmiotow, name='statystyki_przedmiotow'),
-    path('eksport-ocen/', views.eksport_ocen_csv, name='eksport_ocen_csv'),
-    path('historia-ocen/', views.historia_moich_ocen, name='historia_moich_ocen'),
-    path('statystyki/', views.statystyki_ogolne, name='statystyki_ogolne'),
 ]

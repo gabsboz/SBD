@@ -153,7 +153,7 @@ def student_dashboard(request):
     except (Konto.DoesNotExist, Student.DoesNotExist):
         return redirect('konto_login')
 
-    # Pobierz statystyki studenta
+    # Pobierz podstawowe statystyki studenta
     with connection.cursor() as cursor:
         # Średnia ocen studenta
         cursor.execute("""
@@ -216,7 +216,7 @@ def moje_oceny(request):
 
 @tylko_dla_nauczycieli
 def nauczyciel_dashboard(request):
-    # Kokpit nauczyciela, pokazuje jego dane i statystyki
+    # Kokpit nauczyciela, pokazuje jego dane i podstawowe statystyki
     konto_id = request.session.get('konto_id')
 
     try:
@@ -225,7 +225,7 @@ def nauczyciel_dashboard(request):
     except (Konto.DoesNotExist, nauczyciel.DoesNotExist):
         return redirect('konto_login')
     
-    # Pobierz statystyki nauczyciela
+    # Pobierz podstawowe statystyki nauczyciela
     with connection.cursor() as cursor:
         # Liczba wystawionych ocen
         cursor.execute("""
@@ -246,22 +246,11 @@ def nauczyciel_dashboard(request):
         
         result = cursor.fetchone()
         liczba_przedmiotow = result[0] if result else 0
-
-        # Średnia wystawianych ocen
-        cursor.execute("""
-            SELECT NVL(ROUND(AVG(wartosc), 2), 0) as srednia
-            FROM MAINAPP_OCENA 
-            WHERE nauczyciel_id = :nauczyciel_id
-        """, {'nauczyciel_id': nauczyciel_obj.nauczyciel_id})
-        
-        result = cursor.fetchone()
-        srednia_ocen = result[0] if result else 0
     
     return render(request, 'mainapp/nauczyciel_dashboard.html', {
         'nauczyciel': nauczyciel_obj,
         'liczba_ocen': liczba_ocen,
-        'liczba_przedmiotow': liczba_przedmiotow,
-        'srednia_ocen': srednia_ocen
+        'liczba_przedmiotow': liczba_przedmiotow
     })
 
 
@@ -371,155 +360,4 @@ def moje_grupy(request):
     return render(request, 'mainapp/moje_grupy.html', {
         'student': student_obj,
         'grupy': grupy_data
-    })
-
-
-@tylko_dla_nauczycieli
-def statystyki_przedmiotow(request):
-    """Statystyki przedmiotów dla nauczyciela"""
-    konto_id = request.session.get('konto_id')
-    
-    try:
-        konto_uzytkownika = Konto.objects.get(pk=konto_id)
-        nauczyciel_obj = nauczyciel.objects.get(konto=konto_uzytkownika)
-    except (Konto.DoesNotExist, nauczyciel.DoesNotExist):
-        return redirect('konto_login')
-
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT 
-                p.nazwa as przedmiot_nazwa,
-                COUNT(o.ocena_id) as liczba_ocen,
-                NVL(ROUND(AVG(o.wartosc), 2), 0) as srednia_ocen,
-                MIN(o.wartosc) as min_ocena,
-                MAX(o.wartosc) as max_ocena
-            FROM MAINAPP_PRZEDMIOT p
-            LEFT JOIN MAINAPP_OCENA o ON p.przedmiot_id = o.przedmiot_id
-            WHERE p.nauczyciel_id = :nauczyciel_id
-            GROUP BY p.przedmiot_id, p.nazwa
-            ORDER BY p.nazwa
-        """, {'nauczyciel_id': nauczyciel_obj.nauczyciel_id})
-        
-        statystyki = cursor.fetchall()
-
-    return render(request, 'mainapp/statystyki_przedmiotow.html', {
-        'nauczyciel': nauczyciel_obj,
-        'statystyki': statystyki
-    })
-
-
-@tylko_dla_nauczycieli
-def eksport_ocen_csv(request):
-    """Eksport ocen do pliku CSV"""
-    konto_id = request.session.get('konto_id')
-    
-    try:
-        konto_uzytkownika = Konto.objects.get(pk=konto_id)
-        nauczyciel_obj = nauczyciel.objects.get(konto=konto_uzytkownika)
-    except (Konto.DoesNotExist, nauczyciel.DoesNotExist):
-        return redirect('konto_login')
-
-    response = HttpResponse(content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = f'attachment; filename="oceny_{nauczyciel_obj.nazwisko}_{datetime.now().strftime("%Y%m%d")}.csv"'
-    
-    writer = csv.writer(response)
-    writer.writerow(['Student', 'Przedmiot', 'Ocena', 'Data', 'Semestr'])
-    
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT 
-                s.imie || ' ' || s.nazwisko as student_name,
-                p.nazwa as przedmiot,
-                o.wartosc,
-                TO_CHAR(o.data_wprowadzenia, 'YYYY-MM-DD HH24:MI:SS'),
-                sem.nazwa as semestr
-            FROM MAINAPP_OCENA o
-            JOIN MAINAPP_STUDENT s ON o.student_id = s.student_id
-            JOIN MAINAPP_PRZEDMIOT p ON o.przedmiot_id = p.przedmiot_id
-            JOIN MAINAPP_SEMESTR sem ON o.semestr_id = sem.semestr_id
-            WHERE o.nauczyciel_id = :nauczyciel_id
-            ORDER BY s.nazwisko, s.imie, p.nazwa, o.data_wprowadzenia
-        """, {'nauczyciel_id': nauczyciel_obj.nauczyciel_id})
-        
-        for row in cursor.fetchall():
-            writer.writerow(row)
-    
-    return response
-
-
-@tylko_dla_studentow
-def historia_moich_ocen(request):
-    """Historia zmian ocen studenta"""
-    konto_id = request.session.get('konto_id')
-
-    try:
-        konto_uzytkownika = Konto.objects.get(pk=konto_id)
-        student_obj = Student.objects.get(konto=konto_uzytkownika)
-    except (Konto.DoesNotExist, Student.DoesNotExist):
-        return redirect('konto_login')
-
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT 
-                p.nazwa as przedmiot,
-                o.wartosc as aktualna_ocena,
-                h.wartosc as poprzednia_ocena,
-                TO_CHAR(h.data_zmiany, 'YYYY-MM-DD HH24:MI:SS') as data_zmiany,
-                n.imie || ' ' || n.nazwisko as nauczyciel
-            FROM MAINAPP_HISTORIA_OCEN h
-            JOIN MAINAPP_OCENA o ON h.ocena_id = o.ocena_id
-            JOIN MAINAPP_PRZEDMIOT p ON o.przedmiot_id = p.przedmiot_id
-            JOIN MAINAPP_NAUCZYCIEL n ON h.nauczyciel_id = n.nauczyciel_id
-            WHERE o.student_id = :student_id
-            ORDER BY h.data_zmiany DESC
-        """, {'student_id': student_obj.student_id})
-        
-        historia = cursor.fetchall()
-
-    return render(request, 'mainapp/historia_ocen.html', {
-        'student': student_obj,
-        'historia': historia
-    })
-
-
-def statystyki_ogolne(request):
-    """Ogólne statystyki systemu - dostępne dla wszystkich zalogowanych"""
-    rola = request.session.get('rola')
-    if not rola:
-        return redirect('konto_login')
-
-    with connection.cursor() as cursor:
-        # Podstawowe statystyki
-        cursor.execute("SELECT COUNT(*) FROM MAINAPP_STUDENT")
-        liczba_studentow = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT COUNT(*) FROM MAINAPP_NAUCZYCIEL")
-        liczba_nauczycieli = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT COUNT(*) FROM MAINAPP_PRZEDMIOT")
-        liczba_przedmiotow = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT COUNT(*) FROM MAINAPP_OCENA")
-        liczba_ocen = cursor.fetchone()[0]
-        
-        # Średnia ocen w systemie
-        cursor.execute("SELECT NVL(ROUND(AVG(wartosc), 2), 0) FROM MAINAPP_OCENA")
-        srednia_systemowa = cursor.fetchone()[0]
-        
-        # Rozkład ocen
-        cursor.execute("""
-            SELECT wartosc, COUNT(*) as liczba
-            FROM MAINAPP_OCENA
-            GROUP BY wartosc
-            ORDER BY wartosc
-        """)
-        rozklad_ocen = cursor.fetchall()
-
-    return render(request, 'mainapp/statystyki_ogolne.html', {
-        'liczba_studentow': liczba_studentow,
-        'liczba_nauczycieli': liczba_nauczycieli,
-        'liczba_przedmiotow': liczba_przedmiotow,
-        'liczba_ocen': liczba_ocen,
-        'srednia_systemowa': srednia_systemowa,
-        'rozklad_ocen': rozklad_ocen
     })

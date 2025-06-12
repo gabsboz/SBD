@@ -10,7 +10,7 @@
             background-color: #f5f5f5;
         }
         .container {
-            max-width: 600px;
+            max-width: 500px;
             margin: 0 auto;
             background: white;
             padding: 30px;
@@ -59,7 +59,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🏆 Twój ranking</h1>
+        <h1>Twój ranking</h1>
 
         {% if moje_miejsce %}
             <div class="ranking-info">
@@ -72,7 +72,6 @@
         {% else %}
             <div class="ranking-info no-grades">
                 <p>Nie masz jeszcze ocen, więc nie możesz być umieszczony w rankingu.</p>
-                <p>Gdy otrzymasz pierwsze oceny, pojawisz się w rankingu!</p>
             </div>
         {% endif %}
 
