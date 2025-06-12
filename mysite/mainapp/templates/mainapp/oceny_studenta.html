@@ -23,6 +23,13 @@
     </tbody>
 </table>
 
+{% if srednia_ocen >= 3 %}
+    <p style="color: green; font-weight: bold;">zaliczone.</p>
+{% else %}
+    <p style="color: red; font-weight: bold;">niezaliczone.</p>
+{% endif %}
+
+
 {% if request.session.rola == 'nauczyciel' %}
     <h2>Dodaj ocenę</h2>
     <form method="post">
