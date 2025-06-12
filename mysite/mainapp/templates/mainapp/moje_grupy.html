@@ -1,31 +1,22 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <title>Moje grupy</title>
-</head>
-<body>
-
-<h2>Moje grupy zajęciowe</h2>
+<h2>Moje zaliczenia</h2>
 
 <table border="1">
     <tr>
+        <th>ID</th>
         <th>Przedmiot</th>
-        <th>Grupa</th>
+        <th>Typ zaliczenia</th>
+        <th>Data</th>
     </tr>
-    {% for grupa in grupy %}
+    {% for zaliczenie in zaliczenia %}
     <tr>
-        <td>{{ grupa.przedmiot_nazwa }}</td>
-        <td>{{ grupa.grupa_nazwa }}</td>
+        <td>{{ zaliczenie.zaliczenie_id }}</td>
+        <td>{{ zaliczenie.przedmiot_nazwa }}</td>
+        <td>{{ zaliczenie.typ }}</td>
+        <td>{{ zaliczenie.data|date:"Y-m-d H:i" }}</td>
     </tr>
     {% empty %}
     <tr>
-        <td colspan="2">Brak przypisanych grup.</td>
+        <td colspan="4">Brak zaliczeń.</td>
     </tr>
     {% endfor %}
 </table>
-
-<a href="{% url 'student_dashboard' %}">Powrót do panelu</a>
-
-</body>
-</html>

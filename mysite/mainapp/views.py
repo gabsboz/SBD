@@ -157,7 +157,6 @@ def student_dashboard(request):
 
 @tylko_dla_studentow
 def moje_oceny(request):
-    # Widok ocen zalogowanego studenta (pobierane przez procedurę)
     konto_id = request.session.get('konto_id')
 
     try:
@@ -168,7 +167,6 @@ def moje_oceny(request):
 
     with connection.cursor() as cursor:
         refcursor = cursor.var(oracledb.DB_TYPE_CURSOR)
-        
         cursor.execute("""
             BEGIN
                 :refcursor := get_student_grades(:student_id);
@@ -181,10 +179,18 @@ def moje_oceny(request):
         result_cursor = refcursor.getvalue()
         grades = result_cursor.fetchall()
 
+    # Liczymy średnią (uwaga, jeśli brak ocen to srednia=0)
+    if grades:
+        srednia = sum(grade[1] for grade in grades) / len(grades)
+    else:
+        srednia = 0
+
     return render(request, 'mainapp/oceny_studenta.html', {
         'student': student,
-        'oceny': grades
+        'oceny': grades,
+        'srednia_ocen': round(srednia, 2)
     })
+
 
 
 @tylko_dla_nauczycieli
@@ -263,7 +269,6 @@ def ranking_view(request):
 
 
 def moje_grupy(request):
-    # Widok grup dla zalogowanego studenta (wywołanie procedury)
     konto_id = request.session.get('konto_id')
 
     try:
@@ -273,6 +278,7 @@ def moje_grupy(request):
         return redirect('konto_login')
 
     with connection.cursor() as cursor:
+        # Pobranie grup
         refcursor = cursor.var(oracledb.DB_TYPE_CURSOR)
         cursor.execute("""
             BEGIN
@@ -282,14 +288,34 @@ def moje_grupy(request):
             'refcursor': refcursor,
             'student_id': student_obj.student_id,
         })
-
         result_cursor = refcursor.getvalue()
         grupy = result_cursor.fetchall()
+        grupy_data = [{'przedmiot_nazwa': p, 'grupa_nazwa': g} for p, g in grupy]
 
-    # Zamiana wyniku na listę słowników do łatwego wyświetlania w template
-    grupy_data = [{'przedmiot_nazwa': przedmiot, 'grupa_nazwa': grupa} for przedmiot, grupa in grupy]
+        # Pobranie zaliczeń
+        refcursor2 = cursor.var(oracledb.DB_TYPE_CURSOR)
+        cursor.execute("""
+            BEGIN
+                :refcursor := get_student_zaliczenia(:student_id);
+            END;
+        """, {
+            'refcursor': refcursor2,
+            'student_id': student_obj.student_id,
+        })
+        result_cursor2 = refcursor2.getvalue()
+        zaliczenia = result_cursor2.fetchall()
+        zaliczenia_data = [
+            {
+                'zaliczenie_id': zid,
+                'przedmiot_nazwa': p,
+                'typ': t,
+                'data': d
+            }
+            for zid, p, t, d in zaliczenia
+        ]
 
     return render(request, 'mainapp/moje_grupy.html', {
         'student': student_obj,
-        'grupy': grupy_data
+        'grupy': grupy_data,
+        'zaliczenia': zaliczenia_data,
     })
