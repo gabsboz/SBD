@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
-
+from django.utils import timezone
 # ENUMY (czyli stałe wartości, żeby nie wpisywać stringów na sztywno)
 class Rola(models.TextChoices):
     STUDENT = 'student', 'student'
@@ -24,7 +24,7 @@ class konto(models.Model):
     login = models.CharField(max_length=255, unique=True)
     haslo = models.CharField(max_length=255)
     rola = models.CharField(max_length=20, choices=Rola.choices)
-
+    last_login = models.DateTimeField(default=timezone.now) 
     def save(self, *args, **kwargs):
         # Haszuj hasło tylko jeśli nie jest już zahashowane
         if not self.haslo.startswith('pbkdf2_'):
@@ -37,6 +37,34 @@ class konto(models.Model):
 
     def __str__(self):
         return self.login
+    
+    @property
+    def is_authenticated(self):
+        return True
+    
+    @property
+    def is_active(self):
+        return True  # lub jakąś logikę
+    
+    @property
+    def is_staff(self):
+        return self.rola == 'admin'  # tylko admin ma dostęp do admina
+    
+    @property
+    def is_superuser(self):
+        return self.rola == 'admin'  # jeśli chcesz
+    
+    def has_perm(self, perm, obj=None):
+        # Proste rozwiązanie: każdy admin ma wszystkie uprawnienia
+        return self.is_staff
+
+    def has_module_perms(self, app_label):
+        # Podobnie, dostęp do modułu jeśli jest adminem
+        return self.is_staff
+    
+    def get_username(self):
+        return self.login
+    
 
 
 class nauczyciel(models.Model):
@@ -46,7 +74,8 @@ class nauczyciel(models.Model):
     tytul = models.CharField(max_length=255)
     konto = models.ForeignKey(konto, on_delete=models.CASCADE)
     # powiązanie z kontem, przy usunięciu konta idzie też nauczyciel
-
+    def __str__(self):
+            return str(self.nauczyciel_id)
 
 class student(models.Model):
     student_id = models.AutoField(primary_key=True)
@@ -56,6 +85,8 @@ class student(models.Model):
     rok_studiow = models.IntegerField()
     konto = models.ForeignKey(konto, on_delete=models.CASCADE)
     # analogicznie jak u nauczyciela
+    def __str__(self):
+        return str(self.student_id)
 
 
 class przedmiot(models.Model):
@@ -88,7 +119,8 @@ class ocena(models.Model):
     nauczyciel = models.ForeignKey(nauczyciel, on_delete=models.CASCADE)
     semestr = models.ForeignKey(semestr, on_delete=models.CASCADE)
     # ocena powiązana z konkretnym studentem, przedmiotem, nauczycielem i semestrem
-
+    def __str__(self):
+        return str(self.ocena_id)
 
 class historia_ocen(models.Model):
     historia_id = models.AutoField(primary_key=True)
@@ -112,6 +144,9 @@ class grupa_zajeciowa(models.Model):
     nazwa = models.CharField(max_length=255)
     przedmiot = models.ForeignKey(przedmiot, on_delete=models.CASCADE)
     # grupa powiązana z przedmiotem
+    def __str__(self):
+        return f"{self.grupa_id} - {self.nazwa}"
+
 
 
 class student_grupa(models.Model):

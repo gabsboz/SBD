@@ -125,3 +125,8 @@ DATABASES = {
     }
 }
 
+AUTHENTICATION_BACKENDS = [
+    'mainapp.admin_auth.KontoBackend',
+]
+
+
