@@ -1,10 +1,10 @@
 
 
-## 🛠️ Funkcje SQL
+## Funkcje SQL
 
 
 
-### 🔽 `student_pkg`
+### `student_pkg`
 
 ```sql
 CREATE OR REPLACE PACKAGE student_pkg AS
@@ -137,7 +137,7 @@ END student_pkg;
 
 ```
 
-### 🔽 `triger`
+### `triger`
 ```sql
 create or replace TRIGGER trg_historia_ocen
 AFTER INSERT OR UPDATE OR DELETE ON MAINAPP_OCENA
